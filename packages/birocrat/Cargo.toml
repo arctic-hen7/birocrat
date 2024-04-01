@@ -1,0 +1,11 @@
+[package]
+name = "birocrat"
+version = "0.1.0"
+authors = [ "Sam Brew <arctic.hen@pm.me>" ]
+edition = "2021"
+
+[dependencies]
+thiserror = "1"
+# Version of Lua??
+mlua = { version = "0.9", features = [ "luajit", "vendored", "serialize" ] }
+serde_json = "1"
