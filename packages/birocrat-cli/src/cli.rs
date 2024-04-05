@@ -7,4 +7,6 @@ use std::path::PathBuf;
 pub struct Args {
     /// Path to a Lua script that drives the form
     pub script: PathBuf,
+    #[arg(short, long = "param")]
+    pub params: Vec<String>,
 }

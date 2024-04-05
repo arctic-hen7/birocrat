@@ -74,4 +74,9 @@ pub enum Error {
     },
     #[error("invalid answer type for question (expected '{expected}')")]
     InvalidAnswerType { expected: &'static str },
+    #[error("failed to serialize form parameters to lua table")]
+    SerializeFormParamsFailed {
+        #[source]
+        source: mlua::Error,
+    },
 }

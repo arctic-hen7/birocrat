@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::cli::Args;
 use birocrat::{Answer, Form, FormPoll, Question};
 use clap::Parser;
@@ -24,8 +26,25 @@ fn core() -> Result<(), Error> {
     let script = std::fs::read_to_string(args.script)
         .map_err(|err| Error::ReadScriptFailed { source: err })?;
 
+    // Parse the parameters
+    let params: HashMap<String, String> = args
+        .params
+        .into_iter()
+        .map(|p| p.splitn(2, '=').map(|s| s.to_string()).collect())
+        .map(|mut parts: Vec<String>| {
+            (
+                parts.remove(0),
+                if parts.is_empty() {
+                    String::new()
+                } else {
+                    parts.remove(0)
+                },
+            )
+        })
+        .collect();
+
     let vm = Lua::new();
-    let mut form = Form::new(&script, &vm)?;
+    let mut form = Form::new(&script, params, &vm)?;
 
     // Format the first question inside a `FormPoll` for consistency of handling logic
     let mut poll = FormPoll::Question {

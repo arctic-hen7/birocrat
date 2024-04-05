@@ -1,7 +1,7 @@
 pub mod error;
 
 use crate::error::Error;
-use mlua::{Function, Lua, LuaSerdeExt, Table, Value as LuaValue};
+use mlua::{Function, IntoLua, Lua, LuaSerdeExt, Table, Value as LuaValue};
 use serde_json::Value;
 use std::collections::HashMap;
 
@@ -40,10 +40,35 @@ pub struct Form<'l> {
     /// state list when a previous answer is changed and also determine if an error would occur and
     /// propagate that immediately (in which case the old `next_state` would be kept).
     next_state: (ScriptState, Value),
+    /// A series of parameters to be passed to the form script. This allows handling everything
+    /// from user identifiers to default values. It is *not* modifiable.
+    ///
+    /// These are stored as a reference to a serialized object in the Lua VM.
+    parameters: Table<'l>,
 }
 impl<'l> Form<'l> {
     /// Creates a new form from the given Lua script. All this does is loads the script.
-    pub fn new(script: &str, lua_vm: &'l Lua) -> Result<Self, Error> {
+    pub fn new<K: IntoLua<'l>, V: IntoLua<'l>>(
+        script: &str,
+        parameters: HashMap<K, V>,
+        lua_vm: &'l Lua,
+    ) -> Result<Self, Error> {
+        // Register the parameters in the Lua VM
+        let parameters = lua_vm
+            .create_table_from(parameters.into_iter())
+            .map_err(|err| Error::SerializeFormParamsFailed { source: err })?;
+
+        Self::new_with_lua_params(script, parameters, lua_vm)
+    }
+    /// Same as [`Self::new`], but this takes parameters allocated within the Lua VM. In some
+    /// cases, this can be more flexible if serialization can be skipped, or if a heterogeneous
+    /// collection is desired. Most users should use [`Self::new`] though, which takes a regular
+    /// [`HashMap`].
+    pub fn new_with_lua_params(
+        script: &str,
+        parameters: Table<'l>,
+        lua_vm: &'l Lua,
+    ) -> Result<Self, Error> {
         lua_vm
             .load(script)
             .exec()
@@ -55,11 +80,10 @@ impl<'l> Form<'l> {
 
         // Get the first state (manually, because we don't have a `self` yet and because we need to
         // pass `nil` values, which should otherwise be impossible)
-        let first_state = Self::call_driver_fn(lua_vm, &driver_function, None)?.map_err(|err| {
-            Error::FirstPollFailed {
+        let first_state = Self::call_driver_fn(lua_vm, &driver_function, parameters.clone(), None)?
+            .map_err(|err| Error::FirstPollFailed {
                 script_err: err.to_string(),
-            }
-        })?;
+            })?;
 
         if let ScriptState::Asking { .. } = first_state.0 {
             Ok(Self {
@@ -68,6 +92,7 @@ impl<'l> Form<'l> {
                 driver_function,
                 script_states: Vec::new(),
                 next_state: first_state,
+                parameters,
             })
         } else {
             // This isn't a form...
@@ -256,6 +281,8 @@ impl<'l> Form<'l> {
         Self::call_driver_fn(
             self.lua_vm,
             &self.driver_function,
+            // Cheap clone of a Lua reference
+            self.parameters.clone(),
             // PERF: Way of avoiding this clone?
             Some((inner_state.clone(), answer)),
         )
@@ -268,6 +295,7 @@ impl<'l> Form<'l> {
     fn call_driver_fn(
         lua_vm: &'l Lua,
         driver_function: &Function<'l>,
+        parameters: Table<'l>,
         inner_state_and_answer: Option<(Value, &Answer)>,
     ) -> Result<Result<(ScriptState, Value), String>, Error> {
         // Convert the answer provided into a Lua table, or, if nothing was provided, call with
@@ -286,7 +314,7 @@ impl<'l> Form<'l> {
         };
 
         let ret_table: Table = driver_function
-            .call((inner_state, answer))
+            .call((inner_state, answer, parameters))
             .map_err(|err| Error::RunDriverFailed { source: err })?;
         let state: String = ret_table.get(1).map_err(|_| Error::InvalidResult)?;
         let props: LuaValue = ret_table.get(2).map_err(|_| Error::InvalidResult)?;

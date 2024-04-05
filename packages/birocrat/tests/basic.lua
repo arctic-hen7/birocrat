@@ -3,7 +3,7 @@ local questions = {
 	{
 		id = 1,
 		type = "simple",
-		text = "What is your name?",
+		text = "What is your name, user {id}?",
 	},
 	{
 		id = 2,
@@ -25,11 +25,18 @@ local questions = {
 	},
 }
 
-function Main(state, answer)
+function Main(state, answer, params)
 	-- If this is the first time running the script
 	if state == nil and answer == nil then
 		-- Return the first question
-		return { "question", questions[1], { question = 1 } }
+		local question = questions[1]
+		if params.id == nil then
+			-- This will fail out the whole form, so there's no need to go back here, hence no need
+			-- for a valid state
+			return { "error", "No ID parameter provided.", {} }
+		end
+		question.text = question.text:gsub("{id}", params.id)
+		return { "question", question, { question = 1 } }
 	end
 
 	if state.question == 1 then

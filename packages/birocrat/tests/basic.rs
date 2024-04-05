@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use birocrat::*;
 use mlua::Lua;
 use serde_json::json;
@@ -6,13 +8,15 @@ static BASIC_SCRIPT: &str = include_str!("basic.lua");
 
 #[test]
 fn should_work() {
+    let mut params = HashMap::new();
+    params.insert("id", 37);
     let vm = Lua::new();
-    let mut form = Form::new(BASIC_SCRIPT, &vm).unwrap();
+    let mut form = Form::new(BASIC_SCRIPT, params, &vm).unwrap();
 
     let question = form.first_question();
     assert_eq!(
         question,
-        &Question::Simple("What is your name?".to_string())
+        &Question::Simple("What is your name, user 37?".to_string())
     );
     let poll = form
         .progress_with_answer(0, Answer::Text("Alice".to_string()))
