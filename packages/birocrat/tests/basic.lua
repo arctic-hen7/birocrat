@@ -9,6 +9,7 @@ local questions = {
 		id = 2,
 		type = "simple",
 		text = "How old are you, {name}?",
+		default = "30",
 	},
 	{
 		id = 3,

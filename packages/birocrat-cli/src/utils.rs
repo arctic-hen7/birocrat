@@ -2,8 +2,14 @@ use crate::error::Error;
 use dialoguer::{Editor, Input, MultiSelect, Select};
 
 /// Reads a single-line input from the terminal using `dialoguer`.
-pub fn read_simple(prompt: &str) -> Result<String, Error> {
-    let input = Input::<String>::new().with_prompt(prompt).interact()?;
+pub fn read_simple(prompt: &str, default: Option<String>) -> Result<String, Error> {
+    let input = if let Some(default) = default {
+        Input::<String>::new().with_prompt(prompt).default(default)
+    } else {
+        Input::<String>::new().with_prompt(prompt)
+    }
+    .interact()?;
+
     Ok(input)
 }
 

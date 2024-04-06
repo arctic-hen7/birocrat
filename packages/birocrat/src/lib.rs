@@ -188,7 +188,7 @@ impl<'l> Form<'l> {
 
         // Check the answer
         match question {
-            Question::Simple(_) | Question::Multiline(_) => {
+            Question::Simple { .. } | Question::Multiline { .. } => {
                 if !matches!(answer, Answer::Text(_)) {
                     return Err(Error::InvalidAnswerType {
                         expected: "text for simple/multiline question",
@@ -391,11 +391,19 @@ impl ScriptState {
                 let question_body: String = question_table
                     .get("text")
                     .map_err(|err| Error::NoBodyInQuestionData { source: err })?;
+                let suggested_answer: Option<String> =
+                    question_table.get("default").unwrap_or(None);
 
                 // The remaining options we extract are type-dependent
                 let question = match question_type.as_str() {
-                    "simple" => Question::Simple(question_body),
-                    "multiline" => Question::Multiline(question_body),
+                    "simple" => Question::Simple {
+                        prompt: question_body,
+                        default: suggested_answer,
+                    },
+                    "multiline" => Question::Multiline {
+                        prompt: question_body,
+                        default: suggested_answer,
+                    },
                     "select" => {
                         // If `multiple` isn't present, we'll default to `false`, reasonably. That
                         // means we can't parse it when we get it though
@@ -414,8 +422,18 @@ impl ScriptState {
                             .get("options")
                             .map_err(|err| Error::NoOptionsInQuestionData { source: err })?;
 
+                        // Make sure any default is one of the options
+                        if let Some(default) = &suggested_answer {
+                            if !options.contains(&default) {
+                                return Err(Error::DefaultNotInOptions {
+                                    default: default.clone(),
+                                })?;
+                            }
+                        }
+
                         Question::Select {
                             prompt: question_body,
+                            default: suggested_answer,
                             options,
                             multiple,
                         }
@@ -453,14 +471,26 @@ impl ScriptState {
 pub enum Question {
     /// A simple question that requires a single-line answer. This would correspond in HTML to a
     /// single `<input>`.
-    Simple(String),
+    Simple {
+        /// The prompt for the question.
+        prompt: String,
+        /// A default suggested answer.
+        default: Option<String>,
+    },
     /// A simple question that requires a multiline answer. This would correspond in HTML to a
     /// `<textarea>`.
-    Multiline(String),
+    Multiline {
+        /// The prompt for the question.
+        prompt: String,
+        /// A default suggested answer.
+        default: Option<String>,
+    },
     /// A question where the user can select their answer from a list.
     Select {
         /// The question being asked.
         prompt: String,
+        /// A default suggested answer. This is guaranteed to be one of the options.
+        default: Option<String>,
         /// A list of options the user can take.
         options: Vec<String>,
         /// Whether or not the user can select multiple options. Further validation like ensuring

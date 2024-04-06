@@ -16,7 +16,10 @@ fn should_work() {
     let question = form.first_question();
     assert_eq!(
         question,
-        &Question::Simple("What is your name, user 37?".to_string())
+        &Question::Simple {
+            prompt: "What is your name, user 37?".to_string(),
+            default: None,
+        }
     );
     let poll = form
         .progress_with_answer(0, Answer::Text("Alice".to_string()))
@@ -24,7 +27,10 @@ fn should_work() {
     assert_eq!(
         poll,
         FormPoll::Question {
-            question: &Question::Simple("How old are you, Alice?".to_string()),
+            question: &Question::Simple {
+                prompt: "How old are you, Alice?".to_string(),
+                default: None,
+            },
             answer: None
         }
     );
@@ -45,6 +51,7 @@ fn should_work() {
         FormPoll::Question {
             question: &Question::Select {
                 prompt: "What is your favourite type of cuisine?".to_string(),
+                default: None,
                 options: vec!["Indian", "Korean", "Japanese", "Chinese", "Italian"]
                     .into_iter()
                     .map(|s| s.to_string())
@@ -58,7 +65,10 @@ fn should_work() {
     assert_eq!(
         form.get_question(1),
         Some((
-            &Question::Simple("How old are you, Alice?".to_string()),
+            &Question::Simple {
+                prompt: "How old are you, Alice?".to_string(),
+                default: None,
+            },
             Some(&Answer::Text("25".to_string()))
         ))
     );
@@ -92,6 +102,7 @@ fn should_work() {
         FormPoll::Question {
             question: &Question::Select {
                 prompt: "What levels of spice can you tolerate?".to_string(),
+                default: None,
                 options: vec!["Mild", "Medium", "Hot", "Very Hot", "Extreme Hot"]
                     .into_iter()
                     .map(|s| s.to_string())

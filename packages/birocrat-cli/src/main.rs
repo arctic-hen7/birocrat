@@ -79,18 +79,23 @@ fn core() -> Result<(), Error> {
                 }
 
                 match question {
-                    Question::Simple(prompt) => {
-                        let input = utils::read_simple(prompt)?;
+                    Question::Simple { prompt, default } => {
+                        let input = utils::read_simple(prompt, default.clone())?;
                         poll =
                             form.progress_with_answer(question_idx as usize, Answer::Text(input))?;
                     }
-                    Question::Multiline(prompt) => {
-                        let input = utils::read_multiple(prompt, "")?;
+                    Question::Multiline { prompt, default } => {
+                        let input = utils::read_multiple(
+                            prompt,
+                            &default.as_ref().unwrap_or(&String::new()),
+                        )?;
                         poll =
                             form.progress_with_answer(question_idx as usize, Answer::Text(input))?;
                     }
                     Question::Select {
                         prompt,
+                        // TODO: Add support for default option
+                        default: _,
                         options,
                         multiple,
                     } => {

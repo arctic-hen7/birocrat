@@ -79,4 +79,6 @@ pub enum Error {
         #[source]
         source: mlua::Error,
     },
+    #[error("default suggested answer for select-type question not in provided options list")]
+    DefaultNotInOptions { default: String },
 }
