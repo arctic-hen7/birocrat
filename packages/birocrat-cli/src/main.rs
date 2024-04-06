@@ -126,7 +126,11 @@ fn core() -> Result<(), Error> {
 
     // The above loop can only finish on `FormPoll::Done`, so this is guaranteed to work
     let output = form.into_done().unwrap();
-    println!("{:#?}", output);
+    // This is already a `Value`, so serializing it can't fail
+    let output_str = serde_json::to_string(&output).unwrap();
+
+    // Stdout will be the output of the string for sending it elsewhere
+    println!("{output_str}");
 
     Ok(())
 }
