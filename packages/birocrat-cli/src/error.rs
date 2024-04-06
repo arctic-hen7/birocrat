@@ -11,4 +11,9 @@ pub enum Error {
         #[source]
         source: std::io::Error,
     },
+    #[error("failed to read script from stdin (did you mean to provide a path to the cli?)")]
+    ReadScriptFromStdinFailed {
+        #[source]
+        source: std::io::Error,
+    },
 }

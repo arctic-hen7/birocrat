@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, io::Read};
 
 use crate::cli::Args;
 use birocrat::{Answer, Form, FormPoll, Question};
@@ -23,8 +23,18 @@ fn main() {
 
 fn core() -> Result<(), Error> {
     let args = Args::parse();
-    let script = std::fs::read_to_string(args.script)
-        .map_err(|err| Error::ReadScriptFailed { source: err })?;
+    // We'll take the script from stdin if the user gave `-`, else treat it as a path
+    let script = match args.script.as_str() {
+        "-" => {
+            let mut buffer = String::new();
+            std::io::stdin()
+                .read_to_string(&mut buffer)
+                .map_err(|err| Error::ReadScriptFromStdinFailed { source: err })?;
+            buffer
+        }
+        _ => std::fs::read_to_string(&args.script)
+            .map_err(|err| Error::ReadScriptFailed { source: err })?,
+    };
 
     // Parse the parameters
     let params: HashMap<String, String> = args
