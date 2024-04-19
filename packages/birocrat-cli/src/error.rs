@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -15,5 +17,11 @@ pub enum Error {
     ReadScriptFromStdinFailed {
         #[source]
         source: std::io::Error,
+    },
+    #[error("failed to write form output to '{target:?}'")]
+    WriteOutputFailed {
+        #[source]
+        source: std::io::Error,
+        target: PathBuf,
     },
 }

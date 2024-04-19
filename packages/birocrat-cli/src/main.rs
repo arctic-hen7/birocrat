@@ -1,4 +1,4 @@
-use std::{collections::HashMap, io::Read};
+use std::{collections::HashMap, fs, io::Read};
 
 use crate::cli::Args;
 use birocrat::{Answer, Form, FormPoll, Question};
@@ -134,8 +134,15 @@ fn core() -> Result<(), Error> {
     // This is already a `Value`, so serializing it can't fail
     let output_str = serde_json::to_string(&output).unwrap();
 
-    // Stdout will be the output of the string for sending it elsewhere
-    println!("{output_str}");
+    if let Some(output) = args.output {
+        fs::write(&output, output_str).map_err(|err| Error::WriteOutputFailed {
+            source: err,
+            target: output.clone(),
+        })?;
+        eprintln!("Form output written to {output:?}.")
+    } else {
+        println!("{output_str}");
+    }
 
     Ok(())
 }
