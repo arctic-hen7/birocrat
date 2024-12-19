@@ -2,5 +2,6 @@
 members = [
     "packages/birocrat",
     "packages/birocrat-cli",
+    "packages/birocrat-web",
 ]
 resolver = "2"

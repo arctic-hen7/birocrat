@@ -1,0 +1,11 @@
+version = "0.3.2"
+
+[scripts]
+build = [
+    "tailwind -i index.css -o tailwind.css",
+    "wasm-pack build --dev --target web",
+    "mv pkg/birocrat_web.js dist/birocrat_web.js",
+    "mv pkg/birocrat_web_bg.wasm dist/birocrat_web_bg.wasm"
+]
+serve = "python -m http.server 8080 -b localhost"
+watch = "cargo watch -s \"bonnie build && bonnie serve\" -i dist -i pkg -i tailwind.css"
