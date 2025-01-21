@@ -29,7 +29,7 @@ fn should_work() {
         FormPoll::Question {
             question: &Question::Simple {
                 prompt: "How old are you, Alice?".to_string(),
-                default: None,
+                default: Some("30".to_string()),
             },
             answer: None
         }
@@ -67,7 +67,7 @@ fn should_work() {
         Some((
             &Question::Simple {
                 prompt: "How old are you, Alice?".to_string(),
-                default: None,
+                default: Some("30".to_string()),
             },
             Some(&Answer::Text("25".to_string()))
         ))
