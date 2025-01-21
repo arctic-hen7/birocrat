@@ -15,7 +15,7 @@ pub struct Form<'l> {
     /// question is later asked, we can put up the same answer to the refiling program for
     /// convenience, without having to manage multiple conflicting states of what the script might
     /// have looked like in the past before the clobbering.
-    cached_answers: HashMap<u32, Answer>,
+    cached_answers: HashMap<String, Answer>,
     /// The Lua virtual machine which stores the script driving this form. This is held by
     /// reference and must be provided externally.
     lua_vm: &'l Lua,
@@ -26,13 +26,13 @@ pub struct Form<'l> {
     /// to, say, submit a different answer to a question previously asked.
     ///
     /// The indices in this array are used to index questions in the order which they were asked,
-    /// while the `u32`s stored in each element are script-provided unique question identifiers.
+    /// while the `String`s stored in each element are script-provided unique question identifiers.
     /// These should not be confused!
     ///
     /// Note that driver script states are stored as serialized values because otherwise Lua will
     /// be a little too efficient and override the values from under our noses when we call the
     /// driver script again! (I.e. they will all point to the same value in the VM.)
-    script_states: Vec<(u32, Question, Value)>,
+    script_states: Vec<(String, Question, Value)>,
     /// The state of the script in the next case. For all the states in `script_states`, there are
     /// corresponding answers in `cached_answers`, while this state is the question which has not
     /// yet been answered. Alternately, it might be a completion state. By populating this for the
@@ -124,7 +124,7 @@ impl<'l> Form<'l> {
     pub fn next_question(&self) -> Option<(&Question, Option<&Answer>)> {
         match &self.next_state.0 {
             ScriptState::Asking { question, id } => {
-                let answer = self.cached_answers.get(&id);
+                let answer = self.cached_answers.get(id);
                 Some((question, answer))
             }
             _ => None,
@@ -222,7 +222,7 @@ impl<'l> Form<'l> {
         match next_state {
             Ok((new_state, new_inner_state)) => {
                 // This answer worked, cache it
-                self.cached_answers.insert(*question_id, answer);
+                self.cached_answers.insert(question_id.clone(), answer);
 
                 if should_clobber {
                     // We're changing an answer, so we should get rid of additional questions (they
@@ -362,7 +362,7 @@ enum ScriptState {
     Asking {
         /// The unique ID of the question. This *must not* be repeated for a different question, or
         /// an incorrect previously cached response will be suggested.
-        id: u32,
+        id: String,
         /// The question to ask.
         question: Question,
     },
@@ -382,7 +382,7 @@ impl ScriptState {
                 // We have a question to ask, which will be provided as an ID, a question type, a
                 // question body, and some optional parameters, all in a table
                 let question_table = props.as_table().ok_or(Error::NonTableQuestion)?;
-                let id: u32 = question_table
+                let id: String = question_table
                     .get("id")
                     .map_err(|err| Error::NoIdInQuestionData { source: err })?;
                 let question_type: String = question_table
