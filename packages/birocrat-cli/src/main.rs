@@ -1,11 +1,12 @@
-use std::{collections::HashMap, fs, io::Read};
+use std::{fs, io::Read};
 
-use crate::cli::Args;
+use crate::cli::Cli;
 use birocrat::{Answer, Form, FormPoll, Question};
 use clap::Parser;
 use error::Error;
 use fmterr::fmterr;
 use mlua::Lua;
+use serde_json::Value;
 
 mod cli;
 mod error;
@@ -22,7 +23,7 @@ fn main() {
 }
 
 fn core() -> Result<(), Error> {
-    let args = Args::parse();
+    let args = Cli::parse();
     // We'll take the script from stdin if the user gave `-`, else treat it as a path
     let script = match args.script.as_str() {
         "-" => {
@@ -35,25 +36,42 @@ fn core() -> Result<(), Error> {
         _ => std::fs::read_to_string(&args.script)
             .map_err(|err| Error::ReadScriptFailed { source: err })?,
     };
-
-    // Parse the parameters
-    let params: HashMap<String, String> = args
-        .params
-        .into_iter()
-        .map(|p| p.splitn(2, '=').map(|s| s.to_string()).collect())
-        .map(|mut parts: Vec<String>| {
-            (
-                parts.remove(0),
-                if parts.is_empty() {
-                    String::new()
-                } else {
-                    parts.remove(0)
-                },
-            )
-        })
-        .collect();
-
     let vm = Lua::new();
+
+    // Parse the parameters (we either have a vec of pairs or a JSON file)
+    let params: serde_json::Value = match (args.params.params, args.params.json_params) {
+        (Some(params), None) => Value::Object(
+            params
+                .into_iter()
+                .map(|p| p.splitn(2, '=').map(|s| s.to_string()).collect())
+                .map(|mut parts: Vec<String>| {
+                    (
+                        parts.remove(0),
+                        if parts.is_empty() {
+                            String::new()
+                        } else {
+                            parts.remove(0)
+                        },
+                    )
+                })
+                .map(|(k, v)| (k, Value::String(v)))
+                .collect::<serde_json::Map<_, _>>(),
+        ),
+        (None, Some(json_params)) => {
+            let json_params =
+                fs::read_to_string(&json_params).map_err(|err| Error::ReadJsonParamsFailed {
+                    source: err,
+                    target: json_params,
+                })?;
+            serde_json::from_str(&json_params).map_err(|err| Error::ParseJsonParamsFailed {
+                source: err,
+                target: json_params,
+            })?
+        }
+        (None, None) => Value::Object(serde_json::Map::new()),
+        _ => unreachable!(),
+    };
+
     let mut form = Form::new(&script, params, &vm)?;
 
     // Format the first question inside a `FormPoll` for consistency of handling logic

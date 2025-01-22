@@ -18,6 +18,18 @@ pub enum Error {
         #[source]
         source: std::io::Error,
     },
+    #[error("failed to read JSON parameters from '{target:?}'")]
+    ReadJsonParamsFailed {
+        #[source]
+        source: std::io::Error,
+        target: PathBuf,
+    },
+    #[error("failed to parse JSON parameters from '{target:?}'")]
+    ParseJsonParamsFailed {
+        #[source]
+        source: serde_json::Error,
+        target: String,
+    },
     #[error("failed to write form output to '{target:?}'")]
     WriteOutputFailed {
         #[source]

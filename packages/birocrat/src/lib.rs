@@ -1,7 +1,8 @@
 pub mod error;
 
 use crate::error::Error;
-use mlua::{Function, IntoLua, Lua, LuaSerdeExt, Table, Value as LuaValue};
+use mlua::{Function, Lua, LuaSerdeExt, Table, Value as LuaValue};
+use serde::Serialize;
 use serde_json::Value;
 use std::collections::HashMap;
 
@@ -44,18 +45,14 @@ pub struct Form<'l> {
     /// from user identifiers to default values. It is *not* modifiable.
     ///
     /// These are stored as a reference to a serialized object in the Lua VM.
-    parameters: Table<'l>,
+    parameters: LuaValue<'l>,
 }
 impl<'l> Form<'l> {
     /// Creates a new form from the given Lua script. All this does is loads the script.
-    pub fn new<K: IntoLua<'l>, V: IntoLua<'l>>(
-        script: &str,
-        parameters: HashMap<K, V>,
-        lua_vm: &'l Lua,
-    ) -> Result<Self, Error> {
+    pub fn new<P: Serialize>(script: &str, parameters: P, lua_vm: &'l Lua) -> Result<Self, Error> {
         // Register the parameters in the Lua VM
         let parameters = lua_vm
-            .create_table_from(parameters.into_iter())
+            .to_value(&parameters)
             .map_err(|err| Error::SerializeFormParamsFailed { source: err })?;
 
         Self::new_with_lua_params(script, parameters, lua_vm)
@@ -66,7 +63,7 @@ impl<'l> Form<'l> {
     /// [`HashMap`].
     pub fn new_with_lua_params(
         script: &str,
-        parameters: Table<'l>,
+        parameters: LuaValue<'l>,
         lua_vm: &'l Lua,
     ) -> Result<Self, Error> {
         lua_vm
@@ -295,7 +292,7 @@ impl<'l> Form<'l> {
     fn call_driver_fn(
         lua_vm: &'l Lua,
         driver_function: &Function<'l>,
-        parameters: Table<'l>,
+        parameters: LuaValue<'l>,
         inner_state_and_answer: Option<(Value, &Answer)>,
     ) -> Result<Result<(ScriptState, Value), String>, Error> {
         // Convert the answer provided into a Lua table, or, if nothing was provided, call with
