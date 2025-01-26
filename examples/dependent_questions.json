@@ -1,0 +1,44 @@
+[
+    {
+        "id": "day",
+        "text": "How did today feel?",
+        "type": "simple"
+    },
+    {
+        "id": "meditation",
+        "text": "Did you meditate today?",
+        "type": "select",
+        "options": {
+            "No": [],
+            "Yes": [
+                {
+                    "id": "meditation_duration",
+                    "text": "How long did you meditate for?",
+                    "type": "number"
+                }
+            ]
+        }
+    },
+    {
+        "id": "exercise",
+        "text": "Did you do any exercise today?",
+        "type": "select",
+        "options": {
+            "Yes": [
+                {
+                    "id": "exercise_type",
+                    "text": "What kind of exercise did you do today?",
+                    "type": "select",
+                    "options": [
+                        "Run",
+                        "Weights",
+                        "Swim",
+                        "Cycle",
+                        "Other"
+                    ]
+                }
+            ],
+            "No": []
+        }
+    }
+]
